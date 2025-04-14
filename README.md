@@ -20,12 +20,6 @@ A lightweight and efficient shell implementation in C with support for command c
 make
 ```
 
-## Running Tests
-
-```bash
-make test
-```
-
 ## Dependencies
 
 - GCC

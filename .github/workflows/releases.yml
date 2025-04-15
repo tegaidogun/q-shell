@@ -41,7 +41,7 @@ jobs:
         generate_release_notes: true
         draft: false
         prerelease: false
-        tag_name: "${{ github.sha[0:7] }}"
-        name: "Build ${{ github.sha[0:7] }}"
+        tag_name: "${{ steps.get_short_sha.outputs.short_sha }}"
+        name: "Build ${{ steps.get_short_sha.outputs.short_sha }}"
         token: ${{ secrets.RELEASE_TOKEN }}
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -1,0 +1,48 @@
+name: C/C++ CI and Release
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libreadline-dev python3 doxygen
+
+    - name: Build
+      run: make
+
+    - name: Run tests
+      run: make test
+
+    - name: Generate documentation
+      run: make docs
+
+    - name: Create release artifact
+      run: |
+        mkdir -p dist
+        cp bin/qsh dist/
+        cp -r docs/html dist/docs
+        tar -czf q-shell.tar.gz dist/
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: q-shell.tar.gz
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'

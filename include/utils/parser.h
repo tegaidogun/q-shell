@@ -3,16 +3,37 @@
 
 #include "../core/types.h"
 
-// Parse a command string into a command structure
+/**
+ * @brief Parses a command string into a command structure
+ * 
+ * @param input Command string to parse
+ * @return qsh_command_t* Command structure or NULL on error
+ */
 qsh_command_t* qsh_parse_command(const char* input);
 
-// Free a command structure
+/**
+ * @brief Frees a command structure
+ * 
+ * @param cmd Command structure to free
+ */
 void qsh_free_command(qsh_command_t* cmd);
 
-// Split a string into tokens
+/**
+ * @brief Splits a string into tokens
+ * 
+ * @param str String to split
+ * @param delim Delimiter string
+ * @param count Pointer to store token count
+ * @return char** Array of tokens or NULL on error
+ */
 char** qsh_tokenize(const char* str, const char* delim, size_t* count);
 
-// Free an array of tokens
+/**
+ * @brief Frees an array of tokens
+ * 
+ * @param tokens Token array to free
+ * @param count Number of tokens
+ */
 void qsh_free_tokens(char** tokens, size_t count);
 
 #endif // QSHELL_UTILS_PARSER_H 

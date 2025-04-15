@@ -39,7 +39,7 @@ OBJ_DIRS = $(sort $(dir $(OBJS)))
 # Test executables
 TEST_TARGETS = test_parser test_tokenizer test_profiler test_shell test_input
 
-.PHONY: all clean install uninstall test $(TEST_TARGETS)
+.PHONY: all clean install uninstall test docs $(TEST_TARGETS)
 
 all: $(TARGET)
 
@@ -88,7 +88,7 @@ test_profiler: tests/profiler/test_profiler.o $(filter-out obj/main.o,$(OBJS))
 	@mkdir -p bin
 	$(CC) $(CFLAGS) -o bin/test_profiler $^ $(LDFLAGS)
 
-test_input: obj/utils/input.o obj/utils/test_input.o
+test_input: tests/utils/test_input.o $(filter-out obj/main.o,$(OBJS))
 	@mkdir -p bin
 	$(CC) $(CFLAGS) -o bin/test_input $^ $(LDFLAGS)
 
@@ -104,4 +104,11 @@ test: $(TEST_TARGETS)
 	@./bin/test_profiler
 	@./bin/test_input
 	@./bin/test_tokenizer
-	@echo "All tests passed!" 
+	@echo "All tests passed!"
+
+# Documentation target
+docs:
+	@echo "Generating documentation..."
+	@python3 scripts/generate_docs.py
+	@doxygen Doxyfile
+	@echo "Documentation generated in docs/html/" 

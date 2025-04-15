@@ -1,41 +1,70 @@
-# Q-Shell
+# q-shell
 
-A lightweight and efficient shell implementation in C with support for command chaining, job control, and system call profiling.
+A modern shell implementation with advanced features and extensibility.
 
 ## Features
 
-- Command execution with pipes (`|`), AND (`&&`), and OR (`||`) operators
-- Input/output redirection (`>`, `<`, `>>`, `2>`)
-- Job control (background jobs with `&`)
-- Built-in commands:
-  - `cd`: Change directory
-  - `help`: Show available commands
-  - `exit`: Exit the shell
-  - `profile`: Control system call profiling
-  - `history`: View command history
+- Command chaining with operators (|, &&, ||)
+- I/O redirection
+- Background job control
+- Command history
+- Built-in commands
+- System call profiling
+
+## Dependencies
+
+### Required
+- GCC (GNU Compiler Collection)
+- CMake (>= 3.10)
+- GNU Readline library
+- POSIX-compliant system
+
+### Optional
+- Python 3 (for documentation scripts)
+- Doxygen (for API documentation)
 
 ## Building
 
+1. Clone the repository:
+```bash
+git clone https://github.com/tegaidogun/q-shell.git
+cd q-shell
+```
+
+2. Build the project:
 ```bash
 make
 ```
 
-## Dependencies
-
-- GCC
-- GNU Make
-- readline library
-
-On Ubuntu/Debian:
+3. Install (optional):
 ```bash
-sudo apt install build-essential libreadline-dev
+sudo make install
 ```
 
-On Arch Linux:
+## Documentation and Testing
+
+### Documentation
+To generate the documentation:
 ```bash
-sudo pacman -S base-devel readline
+make docs
 ```
+This will:
+1. Run the Python documentation script to generate markdown files
+2. Generate API documentation using Doxygen
+3. Output the documentation to `docs/html/`
+
+### Testing
+To run all tests:
+```bash
+make test
+```
+This will run the following test suites:
+- Parser tests
+- Shell core tests
+- Profiler tests
+- Input handling tests
+- Tokenizer tests
 
 ## License
 
-MIT License 
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details. 

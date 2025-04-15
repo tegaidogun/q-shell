@@ -205,8 +205,12 @@ static void test_command_operators(void) {
 int main(void) {
     printf("Starting shell tests...\n\n");
     
-    // Initialize shell
-    qsh_init();
+    // Initialize shell state
+    qsh_state_t state = {0};
+    if (qsh_init(&state) != 0) {
+        fprintf(stderr, "Failed to initialize shell\n");
+        return 1;
+    }
     
     test_basic_execution();
     test_redirections();

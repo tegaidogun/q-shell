@@ -1,6 +1,16 @@
+/**
+ * @file Implementation of shell built-in commands
+ * 
+ * This file contains the implementation of various shell built-in commands
+ * such as cd, help, exit, and others. These commands are executed directly
+ * by the shell without forking a new process.
+ */
+
 #include "builtins/builtins.h"
 #include "core/shell.h"
 #include "utils/history.h"
+#include "utils/debug.h"
+#include "utils/input.h"
 
 // System includes
 #include <stdio.h>
@@ -12,6 +22,7 @@
 #include <pwd.h>
 #include <limits.h>
 #include <linux/limits.h>
+#include <wordexp.h>
 
 // Global profiler state
 extern qsh_profiler_t profiler_state;
@@ -35,26 +46,48 @@ const qsh_builtin_t* qsh_builtin_lookup(const char* name) {
     return NULL;
 }
 
-static char* normalize_path(const char* path) {
-    if (!path) return NULL;
-    
-    // Handle empty path
-    if (path[0] == '\0') return NULL;
-    
-    // Allocate buffer for normalized path
-    char* normalized = malloc(PATH_MAX);
-    if (!normalized) {
-        perror("malloc");
-        return NULL;
+/**
+ * @brief Execute a built-in command
+ * 
+ * @param cmd The command to execute
+ * @param args Array of arguments for the command
+ * @return Command exit status
+ */
+int execute_builtin(const char* cmd, char** args) {
+    if (!cmd) {
+        return -1;
     }
-    
-    // Convert to absolute path
-    if (realpath(path, normalized) == NULL) {
-        free(normalized);
-        return NULL;
+
+    const qsh_builtin_t* builtin = qsh_builtin_lookup(cmd);
+    if (!builtin) {
+        return -1;
     }
+
+    // Create a command structure
+    qsh_command_t command = {0};
+    command.cmd = (char*)cmd;
     
-    return normalized;
+    // Copy arguments
+    int i;
+    for (i = 0; args[i] && i < MAX_ARGS; i++) {
+        command.argv[i] = args[i];
+    }
+    command.argc = i;
+    command.operator = CMD_NONE;
+    command.next = NULL;
+    command.redir_count = 0;
+
+    return builtin->handler(&command);
+}
+
+/**
+ * @brief Check if a command is a built-in
+ * 
+ * @param cmd The command to check
+ * @return 1 if built-in, 0 otherwise
+ */
+int is_builtin(const char* cmd) {
+    return qsh_builtin_lookup(cmd) != NULL;
 }
 
 int qsh_builtin_cd(qsh_command_t* cmd) {

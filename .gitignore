@@ -49,3 +49,6 @@ Thumbs.db
 
 # Test scripts
 run_tests.sh 
+
+# User-generated Documentation
+docs

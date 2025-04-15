@@ -1,3 +1,10 @@
+/**
+ * @file Main entry point for the q-shell
+ * 
+ * This file contains the main shell loop and initialization code for q-shell.
+ * It handles user input, command execution, and shell state management.
+ */
+
 #include "../include/core/shell.h"
 #include "../include/core/types.h"
 #include "../include/utils/parser.h"
@@ -14,6 +21,12 @@
 #include <pwd.h>
 #include <sys/types.h>
 
+/**
+ * @brief Sets up signal handlers for the shell
+ * 
+ * Configures the shell to ignore common terminal signals (SIGINT, SIGQUIT, SIGTSTP)
+ * to prevent the shell from being interrupted by keyboard signals.
+ */
 static void setup_signal_handlers(void) {
     // Ignore SIGINT (Ctrl+C) in the shell
     signal(SIGINT, SIG_IGN);
@@ -21,11 +34,24 @@ static void setup_signal_handlers(void) {
     signal(SIGTSTP, SIG_IGN);
 }
 
+/**
+ * @brief Prints the welcome message for the shell
+ * 
+ * Displays a welcome message and information about available help command.
+ */
 static void print_welcome(void) {
     printf("\nq-shell - A Unix-like shell with syscall profiling\n");
     printf("Type 'help' for a list of built-in commands\n\n");
 }
 
+/**
+ * @brief Gets the path to the shell history file
+ * 
+ * Constructs the path to the shell history file in the user's home directory.
+ * The history file is stored as ~/.qsh_history.
+ * 
+ * @return Path to the history file, or NULL if allocation fails
+ */
 static char* get_history_file_path(void) {
     const char* home = getenv("HOME");
     if (!home) {
@@ -41,6 +67,19 @@ static char* get_history_file_path(void) {
     return path;
 }
 
+/**
+ * @brief Main entry point for the shell
+ * 
+ * Initializes the shell environment, sets up signal handlers, and runs the main
+ * command loop. The loop:
+ * 1. Displays the prompt with current working directory
+ * 2. Reads user input
+ * 3. Parses and executes commands
+ * 4. Maintains command history
+ * 5. Handles shell cleanup on exit
+ * 
+ * @return 0 on successful execution, 1 on initialization failure
+ */
 int main(void) {
     char* input;
     qsh_command_t* cmd;

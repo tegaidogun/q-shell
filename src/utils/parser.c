@@ -1,3 +1,10 @@
+/**
+ * @file Implementation of command parsing functionality
+ * 
+ * This file contains the implementation of command parsing for the shell,
+ * including token processing, command chain creation, and argument handling.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +20,14 @@
 // Forward declarations
 void qsh_free_command(qsh_command_t* cmd);
 
+/**
+ * @brief Creates a new command structure
+ * 
+ * Allocates and initializes a new qsh_command_t structure with default values.
+ * The command is initialized with CMD_NONE operator and zeroed memory.
+ * 
+ * @return Pointer to the newly created command, or NULL on allocation failure
+ */
 static qsh_command_t* create_command(void) {
     qsh_command_t* cmd = calloc(1, sizeof(qsh_command_t));
     if (!cmd) return NULL;
@@ -20,6 +35,15 @@ static qsh_command_t* create_command(void) {
     return cmd;
 }
 
+/**
+ * @brief Expands tilde (~) in a path to the user's home directory
+ * 
+ * Handles both ~username and ~/path formats. For ~username, it looks up
+ * the specified user's home directory. For ~ alone, it uses the current
+ * user's home directory.
+ * 
+ * @param path The path containing tilde to expand
+ */
 static void expand_tilde(char* path) {
     DEBUG_LOG(DEBUG_PARSER, "Expanding tilde in path: '%s'", path);
     if (path[0] != '~') {
@@ -59,6 +83,15 @@ static void expand_tilde(char* path) {
     }
 }
 
+/**
+ * @brief Adds an argument to a command structure
+ * 
+ * Handles both command name (first argument) and subsequent arguments.
+ * Ensures proper memory allocation and NULL termination of the argument list.
+ * 
+ * @param cmd The command structure to add the argument to
+ * @param arg The argument string to add
+ */
 static void add_argument(qsh_command_t* cmd, const char* arg) {
     if (!cmd || !arg) return;
     if (cmd->argc >= MAX_ARGS - 1) return;
@@ -66,13 +99,31 @@ static void add_argument(qsh_command_t* cmd, const char* arg) {
     // If this is the first argument, set it as the command name
     if (cmd->argc == 0) {
         cmd->cmd = strdup(arg);
+        if (!cmd->cmd) return;  // Handle allocation failure
     }
     
     cmd->argv[cmd->argc] = strdup(arg);
+    if (!cmd->argv[cmd->argc]) {
+        if (cmd->argc == 0) {
+            free(cmd->cmd);
+            cmd->cmd = NULL;
+        }
+        return;  // Handle allocation failure
+    }
+    
     cmd->argc++;
     cmd->argv[cmd->argc] = NULL;  // Keep the argument list NULL-terminated
 }
 
+/**
+ * @brief Parses a command string into a command structure
+ * 
+ * Processes the input string into tokens and builds a command chain structure.
+ * Handles operators (|, &&, ||), redirections, and argument processing.
+ * 
+ * @param input The command string to parse
+ * @return Pointer to the first command in the chain, or NULL on error
+ */
 qsh_command_t* qsh_parse_command(const char* input) {
     DEBUG_LOG(DEBUG_PARSER, "=== Starting command parsing ===");
     DEBUG_LOG(DEBUG_PARSER, "Input: '%s'", input);
@@ -102,6 +153,9 @@ qsh_command_t* qsh_parse_command(const char* input) {
         DEBUG_LOG(DEBUG_PARSER, "Processing token: type=%d, value='%s'", token->type, token->value);
         
         switch (token->type) {
+            case TOKEN_NONE:
+                // Skip tokens with no type
+                break;
             case TOKEN_OPERATOR:
                 DEBUG_LOG(DEBUG_PARSER, "Found operator: '%s'", token->value);
                 if (strcmp(token->value, "|") == 0) {
@@ -192,6 +246,15 @@ qsh_command_t* qsh_parse_command(const char* input) {
     return first_cmd;
 }
 
+/**
+ * @brief Frees a command chain structure
+ * 
+ * Recursively frees all memory associated with a command chain,
+ * including command names, arguments, redirections, and the command
+ * structures themselves.
+ * 
+ * @param cmd The first command in the chain to free
+ */
 void qsh_free_command(qsh_command_t* cmd) {
     DEBUG_LOG(DEBUG_PARSER, "=== Freeing command chain ===");
     while (cmd) {

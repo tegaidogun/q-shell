@@ -4,83 +4,123 @@
 #include <time.h>
 #include <stddef.h>
 
-// Maximum number of history entries to keep
+/**
+ * @brief Maximum number of history entries to keep
+ */
 #define MAX_HISTORY_ENTRIES 1000
 
-// History entry structure
+/**
+ * @brief Structure representing a history entry
+ */
 typedef struct {
-    char* command;
-    time_t timestamp;
-    int exit_status;
+    char* command;      /**< Command string */
+    time_t timestamp;   /**< Command execution time */
+    int exit_status;    /**< Command exit status */
 } qsh_history_entry_t;
 
-// Initialize history with a file path
+/**
+ * @brief Initializes command history with a file
+ * 
+ * @param history_file Path to history file
+ * @return int 0 on success, non-zero on error
+ */
 int qsh_history_init(const char* history_file);
 
-// Add a command to history
+/**
+ * @brief Adds a command to history
+ * 
+ * @param command Command string to add
+ * @param exit_status Command's exit status
+ * @return int 0 on success, non-zero on error
+ */
 int qsh_history_add(const char* command, int exit_status);
 
-// Clear history
+/**
+ * @brief Clears all history entries
+ */
 void qsh_history_clear(void);
 
-// Save history to file
+/**
+ * @brief Saves history to file
+ * 
+ * @return int 0 on success, non-zero on error
+ */
 int qsh_history_save(void);
 
-// Load history from file
+/**
+ * @brief Loads history from file
+ * 
+ * @param filename Path to history file
+ * @return int 0 on success, non-zero on error
+ */
 int qsh_history_load(const char* filename);
 
-// Show history entries
+/**
+ * @brief Displays history entries
+ */
 void qsh_history_show(void);
 
-// Get number of commands in history
+/**
+ * @brief Gets the number of commands in history
+ * 
+ * @return size_t Number of history entries
+ */
 size_t qsh_history_count(void);
 
-// Clean up history
+/**
+ * @brief Cleans up history resources
+ */
 void qsh_history_cleanup(void);
 
 /**
- * Get a history entry by index.
- * @param index The index of the entry to get.
- * @return The history entry, or NULL if index is out of range.
+ * @brief Gets a history entry by index
+ * 
+ * @param index Entry index
+ * @return const qsh_history_entry_t* Entry or NULL if not found
  */
 const qsh_history_entry_t* qsh_history_get(size_t index);
 
 /**
- * Search history for commands matching exactly.
- * @param command The command to search for.
- * @param count Output parameter for the number of matches found.
- * @return Array of pointers to matching entries, or NULL if none found.
+ * @brief Searches history for exact command matches
+ * 
+ * @param command Command to search for
+ * @param count Pointer to store match count
+ * @return const qsh_history_entry_t** Array of matches or NULL
  */
 const qsh_history_entry_t** qsh_history_search(const char* command, size_t* count);
 
 /**
- * Search history for commands containing a substring.
- * @param substring The substring to search for.
- * @param count Output parameter for the number of matches found.
- * @return Array of pointers to matching entries, or NULL if none found.
+ * @brief Searches history for commands containing substring
+ * 
+ * @param substring Substring to search for
+ * @param count Pointer to store match count
+ * @return const qsh_history_entry_t** Array of matches or NULL
  */
 const qsh_history_entry_t** qsh_history_search_substring(const char* substring, size_t* count);
 
 /**
- * Search history for commands matching a pattern.
- * @param pattern The pattern to match against.
- * @param count Output parameter for the number of matches found.
- * @return Array of pointers to matching entries, or NULL if none found.
+ * @brief Searches history for commands matching pattern
+ * 
+ * @param pattern Pattern to match
+ * @param count Pointer to store match count
+ * @return const qsh_history_entry_t** Array of matches or NULL
  */
 const qsh_history_entry_t** qsh_history_search_pattern(const char* pattern, size_t* count);
 
 /**
- * Get the most recent command.
- * @return The most recent history entry, or NULL if history is empty.
+ * @brief Gets the most recent history entry
+ * 
+ * @return const qsh_history_entry_t* Most recent entry or NULL
  */
 const qsh_history_entry_t* qsh_history_most_recent(void);
 
 /**
- * Get a range of history entries.
- * @param start The start index.
- * @param count The number of entries to get.
- * @param actual_count Output parameter for the actual number of entries returned.
- * @return Array of pointers to history entries, or NULL on error.
+ * @brief Gets a range of history entries
+ * 
+ * @param start Starting index
+ * @param count Number of entries to get
+ * @param actual_count Pointer to store actual count
+ * @return const qsh_history_entry_t** Array of entries or NULL
  */
 const qsh_history_entry_t** qsh_history_range(size_t start, size_t count, size_t* actual_count);
 

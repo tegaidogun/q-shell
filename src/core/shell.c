@@ -541,8 +541,8 @@ void qsh_set_should_exit(bool should_exit) {
 }
 
 // Shell state access functions
-char* qsh_get_current_dir(void) {
-    return strdup(shell_state.current_dir);
+const char* qsh_get_current_dir(void) {
+    return shell_state.current_dir;
 }
 
 void qsh_set_current_dir(const char* dir) {

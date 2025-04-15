@@ -36,7 +36,7 @@ jobs:
         generate_release_notes: true
         draft: false
         prerelease: false
-        tag_name: ${{ github.sha }}
-        name: "q-shell-${{ github.sha }}"
+        tag_name: "${{ github.sha[0:7] }}"
+        name: "Build ${{ github.sha[0:7] }}"
         token: ${{ secrets.RELEASE_TOKEN }}
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -30,14 +30,20 @@ jobs:
         tar -czf q-shell.tar.gz dist/
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
+    - name: Get short SHA
+      id: get_short_sha
+      run: |
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
     - name: Create Release
       uses: actions/create-release@v1
       id: create_release
       env:
         GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
-        tag_name: ${{ github.sha }}
-        release_name: Build ${{ github.sha }}
+        tag_name: ${{ steps.get_short_sha.outputs.short_sha }}
+        release_name: Build ${{ steps.get_short_sha.outputs.short_sha }}
         draft: false
         prerelease: false
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'

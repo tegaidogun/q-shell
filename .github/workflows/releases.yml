@@ -16,19 +16,15 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libreadline-dev python3 doxygen
+        sudo apt-get install -y build-essential libreadline-dev
 
     - name: Build
       run: make
-
-    - name: Generate documentation
-      run: make docs
 
     - name: Create release artifact
       run: |
         mkdir -p dist
         cp bin/qsh dist/
-        cp -r docs/html dist/docs
         tar -czf q-shell.tar.gz dist/
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 

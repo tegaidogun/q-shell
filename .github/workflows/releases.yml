@@ -12,6 +12,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.RELEASE_TOKEN }}
     
     - name: Install dependencies
       run: |
@@ -20,6 +22,9 @@ jobs:
 
     - name: Build
       run: make
+
+    - name: Run tests
+      run: make test
 
     - name: Create release artifact
       run: |

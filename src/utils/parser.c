@@ -12,10 +12,13 @@
 #include <pwd.h>
 #include <unistd.h>
 #include <limits.h>
+#include <glob.h>
+#include <stdbool.h>
 #include "core/types.h"
+#include "core/shell.h"
 #include "utils/tokenizer.h"
+#include "utils/variables.h"
 #include "utils/debug.h"
-#include <linux/limits.h>
 
 // Forward declarations
 void qsh_free_command(qsh_command_t* cmd);
@@ -45,6 +48,9 @@ static qsh_command_t* create_command(void) {
  * @param path The path containing tilde to expand
  */
 static void expand_tilde(char* path) {
+    if (!path || !*path) {
+        return;
+    }
     DEBUG_LOG(DEBUG_PARSER, "Expanding tilde in path: '%s'", path);
     if (path[0] != '~') {
         DEBUG_LOG(DEBUG_PARSER, "No tilde found, returning");
@@ -84,9 +90,85 @@ static void expand_tilde(char* path) {
 }
 
 /**
+ * @brief Expands glob patterns in a string
+ * 
+ * Uses POSIX glob() to expand wildcard patterns like *, ?, []
+ * 
+ * @param pattern The pattern to expand
+ * @param count Pointer to store number of matches
+ * @return char** Array of expanded strings, or NULL on error
+ */
+static char** expand_glob(const char* pattern, size_t* count) {
+    if (!pattern || !count) return NULL;
+    
+    glob_t glob_result;
+    int glob_ret = glob(pattern, GLOB_TILDE | GLOB_BRACE, NULL, &glob_result);
+    
+    if (glob_ret == GLOB_NOMATCH) {
+        // No matches - return the original pattern
+        char** result = malloc(2 * sizeof(char*));
+        if (!result) return NULL;
+        result[0] = strdup(pattern);
+        result[1] = NULL;
+        *count = 1;
+        return result;
+    }
+    
+    if (glob_ret != 0) {
+        *count = 0;
+        return NULL;
+    }
+    
+    // Allocate result array
+    char** result = malloc((glob_result.gl_pathc + 1) * sizeof(char*));
+    if (!result) {
+        globfree(&glob_result);
+        *count = 0;
+        return NULL;
+    }
+    
+    // Copy matched paths
+    for (size_t i = 0; i < glob_result.gl_pathc; i++) {
+        result[i] = strdup(glob_result.gl_pathv[i]);
+        if (!result[i]) {
+            // Cleanup on failure
+            for (size_t j = 0; j < i; j++) {
+                free(result[j]);
+            }
+            free(result);
+            globfree(&glob_result);
+            *count = 0;
+            return NULL;
+        }
+    }
+    result[glob_result.gl_pathc] = NULL;
+    *count = glob_result.gl_pathc;
+    
+    globfree(&glob_result);
+    return result;
+}
+
+/**
+ * @brief Checks if a string contains glob characters
+ * 
+ * @param str String to check
+ * @return true if contains glob chars, false otherwise
+ */
+static bool has_glob_chars(const char* str) {
+    if (!str) return false;
+    for (const char* p = str; *p; p++) {
+        if (*p == '*' || *p == '?' || *p == '[') {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * @brief Adds an argument to a command structure
  * 
  * Handles both command name (first argument) and subsequent arguments.
+ * Expands glob patterns if present.
  * Ensures proper memory allocation and NULL termination of the argument list.
  * 
  * @param cmd The command structure to add the argument to
@@ -94,6 +176,40 @@ static void expand_tilde(char* path) {
  */
 static void add_argument(qsh_command_t* cmd, const char* arg) {
     if (!cmd || !arg) return;
+    
+    // Check for glob expansion
+    if (has_glob_chars(arg)) {
+        size_t glob_count = 0;
+        char** expanded = expand_glob(arg, &glob_count);
+        if (expanded) {
+            for (size_t i = 0; i < glob_count && cmd->argc < MAX_ARGS - 1; i++) {
+                if (cmd->argc == 0) {
+                    cmd->cmd = strdup(expanded[i]);
+                    if (!cmd->cmd) {
+                        free(expanded[i]);
+                        continue;
+                    }
+                }
+                cmd->argv[cmd->argc] = strdup(expanded[i]);
+                if (!cmd->argv[cmd->argc]) {
+                    if (cmd->argc == 0) {
+                        free(cmd->cmd);
+                        cmd->cmd = NULL;
+                    }
+                    free(expanded[i]);
+                    continue;
+                }
+                cmd->argc++;
+                free(expanded[i]);
+            }
+            free(expanded);
+            cmd->argv[cmd->argc] = NULL;
+            return;
+        }
+        // Fall through to non-glob case if expansion fails
+    }
+    
+    // Non-glob case
     if (cmd->argc >= MAX_ARGS - 1) return;
     
     // If this is the first argument, set it as the command name
@@ -124,6 +240,60 @@ static void add_argument(qsh_command_t* cmd, const char* arg) {
  * @param input The command string to parse
  * @return Pointer to the first command in the chain, or NULL on error
  */
+/**
+ * @brief Parses and processes variable assignments before command
+ * 
+ * Handles VAR=value syntax at the start of a command line.
+ * Returns the index of the first non-assignment token.
+ * 
+ * @param tokens Token list to process
+ * @return size_t Index of first non-assignment token, or tokens->count if all are assignments
+ */
+static size_t process_variable_assignments(token_list_t* tokens) {
+    size_t i = 0;
+    
+    while (i < tokens->count) {
+        token_t* token = &tokens->tokens[i];
+        
+        // Check if this looks like a variable assignment (VAR=value)
+        if (token->type == TOKEN_LITERAL) {
+            char* eq = strchr(token->value, '=');
+            if (eq && eq > token->value) {
+                // This is a variable assignment
+                size_t name_len = eq - token->value;
+                char* var_name = strndup(token->value, name_len);
+                char* var_value = strdup(eq + 1);
+                
+                if (var_name && var_value) {
+                    // Validate variable name (alphanumeric and underscore)
+                    bool valid = true;
+                    for (size_t j = 0; j < name_len; j++) {
+                        if (!isalnum(var_name[j]) && var_name[j] != '_') {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    
+                    if (valid) {
+                        DEBUG_LOG(DEBUG_PARSER, "Setting variable: %s=%s", var_name, var_value);
+                        qsh_variable_set(var_name, var_value, false);
+                    }
+                }
+                
+                free(var_name);
+                free(var_value);
+                i++;
+                continue;
+            }
+        }
+        
+        // Not an assignment, stop processing
+        break;
+    }
+    
+    return i;
+}
+
 qsh_command_t* qsh_parse_command(const char* input) {
     DEBUG_LOG(DEBUG_PARSER, "=== Starting command parsing ===");
     DEBUG_LOG(DEBUG_PARSER, "Input: '%s'", input);
@@ -139,6 +309,16 @@ qsh_command_t* qsh_parse_command(const char* input) {
         return NULL;
     }
     
+    // Process variable assignments at the start
+    size_t start_idx = process_variable_assignments(tokens);
+    
+    // If all tokens were assignments, return NULL (no command to execute)
+    if (start_idx >= tokens->count) {
+        DEBUG_LOG(DEBUG_PARSER, "Only variable assignments, no command");
+        free_token_list(tokens);
+        return NULL;
+    }
+    
     qsh_command_t* first_cmd = create_command();
     if (!first_cmd) {
         DEBUG_LOG(DEBUG_PARSER, "Failed to create first command");
@@ -148,7 +328,7 @@ qsh_command_t* qsh_parse_command(const char* input) {
     
     qsh_command_t* current_cmd = first_cmd;
     
-    for (size_t i = 0; i < tokens->count; i++) {
+    for (size_t i = start_idx; i < tokens->count; i++) {
         token_t* token = &tokens->tokens[i];
         DEBUG_LOG(DEBUG_PARSER, "Processing token: type=%d, value='%s'", token->type, token->value);
         
@@ -166,6 +346,8 @@ qsh_command_t* qsh_parse_command(const char* input) {
                     current_cmd->operator = CMD_OR;
                 } else if (strcmp(token->value, "&") == 0) {
                     current_cmd->operator = CMD_BACKGROUND;
+                } else if (strcmp(token->value, ";") == 0) {
+                    current_cmd->operator = CMD_NONE;  // Semicolon just chains commands
                 }
                 
                 // Create next command in chain
@@ -209,9 +391,45 @@ qsh_command_t* qsh_parse_command(const char* input) {
                     redir->type = REDIR_ERR_OUT;
                 } else if (strcmp(token->value, "2>>") == 0) {
                     redir->type = REDIR_ERR_APPEND;
+                } else if (strcmp(token->value, "2>&1") == 0) {
+                    redir->type = REDIR_ERR_TO_OUT;
+                    redir->filename = NULL;  // No filename for 2>&1
+                    current_cmd->redir_count++;
+                    break;
+                } else if (strcmp(token->value, "&>") == 0) {
+                    redir->type = REDIR_BOTH_OUT;
+                } else if (strcmp(token->value, "<<") == 0) {
+                    redir->type = REDIR_HEREDOC;
+                }
+                
+                // For 2>&1, no filename needed - already handled above
+                if (redir->type == REDIR_ERR_TO_OUT) {
+                    break;
+                }
+                
+                if (i + 1 >= tokens->count) {
+                    DEBUG_LOG(DEBUG_PARSER, "Missing redirection target");
+                    qsh_free_command(first_cmd);
+                    free_token_list(tokens);
+                    return NULL;
                 }
                 
                 i++; // Skip to redirection target
+                
+                // For heredoc, the filename is the delimiter
+                if (redir->type == REDIR_HEREDOC) {
+                    redir->filename = strdup(tokens->tokens[i].value);
+                    if (!redir->filename) {
+                        DEBUG_LOG(DEBUG_PARSER, "Failed to duplicate heredoc delimiter");
+                        qsh_free_command(first_cmd);
+                        free_token_list(tokens);
+                        return NULL;
+                    }
+                    // Heredoc content will be read during execution
+                    current_cmd->redir_count++;
+                    break;
+                }
+                
                 redir->filename = strdup(tokens->tokens[i].value);
                 if (!redir->filename) {
                     DEBUG_LOG(DEBUG_PARSER, "Failed to duplicate redirection filename");
@@ -221,6 +439,37 @@ qsh_command_t* qsh_parse_command(const char* input) {
                 }
                 expand_tilde(redir->filename);
                 current_cmd->redir_count++;
+                break;
+                
+            case TOKEN_CMD_SUB:
+                // Handle command substitution - execute and replace with output
+                {
+                    DEBUG_LOG(DEBUG_PARSER, "Processing command substitution: '%s'", token->value);
+                    qsh_command_t* sub_cmd = qsh_parse_command(token->value);
+                    if (sub_cmd) {
+                        char* output = NULL;
+                        size_t output_size = 0;
+                        qsh_execute_and_capture(sub_cmd, &output, &output_size);
+                        if (output) {
+                            // Remove trailing newlines
+                            while (output_size > 0 && output[output_size - 1] == '\n') {
+                                output[--output_size] = '\0';
+                            }
+                            // Add as literal token
+                            if (current_cmd->argc >= MAX_ARGS - 1) {
+                                DEBUG_LOG(DEBUG_PARSER, "Too many arguments");
+                                free(output);
+                                qsh_free_command(sub_cmd);
+                                qsh_free_command(first_cmd);
+                                free_token_list(tokens);
+                                return NULL;
+                            }
+                            add_argument(current_cmd, output);
+                            free(output);
+                        }
+                        qsh_free_command(sub_cmd);
+                    }
+                }
                 break;
                 
             case TOKEN_LITERAL:

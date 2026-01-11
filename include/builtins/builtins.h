@@ -58,6 +58,94 @@ int qsh_builtin_profile(qsh_command_t* cmd);
 int qsh_builtin_history(qsh_command_t* cmd);
 
 /**
+ * @brief Lists background jobs
+ * 
+ * @param cmd Command structure (unused)
+ * @return int Always returns 0
+ */
+int qsh_builtin_jobs(qsh_command_t* cmd);
+
+/**
+ * @brief Brings a job to foreground
+ * 
+ * @param cmd Command structure containing job specifier
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_fg(qsh_command_t* cmd);
+
+/**
+ * @brief Continues a job in background
+ * 
+ * @param cmd Command structure containing job specifier
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_bg(qsh_command_t* cmd);
+
+/**
+ * @brief Prints the current working directory
+ * 
+ * @param cmd Command structure (unused)
+ * @return int Always returns 0
+ */
+int qsh_builtin_pwd(qsh_command_t* cmd);
+
+/**
+ * @brief Prints arguments to stdout
+ * 
+ * @param cmd Command structure containing arguments
+ * @return int Always returns 0
+ */
+int qsh_builtin_echo(qsh_command_t* cmd);
+
+/**
+ * @brief Returns success (exit code 0)
+ * 
+ * @param cmd Command structure (unused)
+ * @return int Always returns 0
+ */
+int qsh_builtin_true(qsh_command_t* cmd);
+
+/**
+ * @brief Returns failure (exit code 1)
+ * 
+ * @param cmd Command structure (unused)
+ * @return int Always returns 1
+ */
+int qsh_builtin_false(qsh_command_t* cmd);
+
+/**
+ * @brief Waits for background jobs to complete
+ * 
+ * @param cmd Command structure containing job IDs (optional)
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_wait(qsh_command_t* cmd);
+
+/**
+ * @brief Sends a signal to a process
+ * 
+ * @param cmd Command structure containing signal and PID
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_kill(qsh_command_t* cmd);
+
+/**
+ * @brief Exports variables to the environment
+ * 
+ * @param cmd Command structure containing variable names
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_export(qsh_command_t* cmd);
+
+/**
+ * @brief Unsets shell variables
+ * 
+ * @param cmd Command structure containing variable names
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_unset(qsh_command_t* cmd);
+
+/**
  * @brief Looks up a built-in command by name
  * 
  * @param name Name of the command to look up

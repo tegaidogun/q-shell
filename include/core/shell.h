@@ -29,8 +29,10 @@ int qsh_execute_command(qsh_command_t* cmd);
 
 /**
  * @brief Enables system call profiling for command execution
+ * 
+ * @return qsh_error_t QSH_SUCCESS on success, error code on failure
  */
-void qsh_enable_profiling(void);
+qsh_error_t qsh_enable_profiling(void);
 
 /**
  * @brief Disables system call profiling
@@ -68,9 +70,9 @@ size_t qsh_job_count(void);
 /**
  * @brief Retrieves the list of current background jobs
  * 
- * @return const qsh_job_t* Array of background jobs
+ * @return qsh_job_t* Array of background jobs (non-const for modification)
  */
-const qsh_job_t* qsh_get_jobs(void);
+qsh_job_t* qsh_get_jobs(void);
 
 /**
  * @brief Terminates a background job by its index
@@ -135,5 +137,31 @@ const char* qsh_get_current_dir(void);
  * @param dir New working directory path
  */
 void qsh_set_current_dir(const char* dir);
+
+/**
+ * @brief Gets the previous working directory
+ * 
+ * @return const char* Previous working directory path or NULL
+ */
+const char* qsh_get_previous_dir(void);
+
+/**
+ * @brief Sets the previous working directory
+ * 
+ * @param dir Previous working directory path
+ */
+void qsh_set_previous_dir(const char* dir);
+
+/**
+ * @brief Executes a command and captures its output
+ * 
+ * Used for command substitution. Executes a command and returns its stdout.
+ * 
+ * @param cmd Command to execute
+ * @param output Pointer to store output buffer (caller must free)
+ * @param output_size Pointer to store output size
+ * @return int Exit status of command
+ */
+int qsh_execute_and_capture(qsh_command_t* cmd, char** output, size_t* output_size);
 
 #endif // QSH_SHELL_H 

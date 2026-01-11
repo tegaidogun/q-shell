@@ -93,4 +93,14 @@ void qsh_profiler_clear_stats(void);
  */
 const char* qsh_syscall_name(long syscall_num);
 
+/**
+ * @brief Collects syscall statistics during process execution
+ * 
+ * This should be called from waitpid handlers to collect syscall data.
+ * 
+ * @param pid Process ID being profiled
+ * @param status Wait status from waitpid
+ */
+void qsh_profiler_collect_syscall(pid_t pid, int status);
+
 #endif // QSH_PROFILER_H 

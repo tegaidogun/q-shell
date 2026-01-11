@@ -37,7 +37,7 @@ TARGET = bin/qsh
 OBJ_DIRS = $(sort $(dir $(OBJS)))
 
 # Test executables
-TEST_TARGETS = test_parser test_tokenizer test_profiler test_shell test_input
+TEST_TARGETS = test_parser test_tokenizer test_profiler test_shell test_input test_variables
 
 .PHONY: all clean install uninstall test docs $(TEST_TARGETS)
 
@@ -96,15 +96,26 @@ test_tokenizer: tests/utils/test_tokenizer.o obj/utils/tokenizer.o $(filter-out 
 	@mkdir -p bin
 	$(CC) $(CFLAGS) -o bin/test_tokenizer $^ $(LDFLAGS)
 
+test_variables: tests/utils/test_variables.o $(filter-out obj/main.o,$(OBJS))
+	@mkdir -p bin
+	$(CC) $(CFLAGS) -o bin/test_variables $^ $(LDFLAGS)
+
+test_command_substitution: tests/utils/test_command_substitution.o $(filter-out obj/main.o,$(OBJS))
+	@mkdir -p bin
+	$(CC) $(CFLAGS) -o bin/test_command_substitution $^ $(LDFLAGS)
+
 # Test target
-test: $(TEST_TARGETS)
+test: $(TEST_TARGETS) test_command_substitution
 	@echo "Running all tests..."
-	@./bin/test_parser
-	@./bin/test_shell
-	@./bin/test_profiler
-	@./bin/test_input
-	@./bin/test_tokenizer
-	@echo "All tests passed!"
+	@echo "=== Running test_parser ===" && ./bin/test_parser || (echo "test_parser FAILED" && exit 1)
+	@echo "=== Running test_tokenizer ===" && ./bin/test_tokenizer || (echo "test_tokenizer FAILED" && exit 1)
+	@echo "=== Running test_input ===" && ./bin/test_input || (echo "test_input FAILED" && exit 1)
+	@echo "=== Running test_shell ===" && ./bin/test_shell || (echo "test_shell FAILED" && exit 1)
+	@echo "=== Running test_profiler ===" && ./bin/test_profiler || (echo "test_profiler FAILED" && exit 1)
+	@echo "=== Running test_variables ===" && ./bin/test_variables || (echo "test_variables FAILED" && exit 1)
+	@echo "=== Running test_command_substitution ===" && ./bin/test_command_substitution || (echo "test_command_substitution FAILED" && exit 1)
+	@echo ""
+	@echo "🎉 All tests passed! 🎉"
 
 # Documentation target
 docs:

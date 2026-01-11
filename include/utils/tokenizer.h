@@ -12,7 +12,8 @@ typedef enum {
     TOKEN_OPERATOR,    /**< Command operator */
     TOKEN_REDIRECTION, /**< I/O redirection */
     TOKEN_QUOTED,      /**< Quoted text */
-    TOKEN_VARIABLE     /**< Environment variable */
+    TOKEN_VARIABLE,    /**< Environment variable */
+    TOKEN_CMD_SUB      /**< Command substitution $(cmd) or `cmd` */
 } token_type_t;
 
 /**

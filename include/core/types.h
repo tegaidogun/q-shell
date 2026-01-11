@@ -41,7 +41,10 @@ typedef enum {
     REDIR_OUTPUT,   /**< Output redirection (>) */
     REDIR_APPEND,   /**< Append output (>>) */
     REDIR_ERR_OUT,  /**< Error output redirection (2>) */
-    REDIR_ERR_APPEND /**< Append error output (2>>) */
+    REDIR_ERR_APPEND, /**< Append error output (2>>) */
+    REDIR_ERR_TO_OUT, /**< Redirect stderr to stdout (2>&1) */
+    REDIR_BOTH_OUT,  /**< Redirect both stdout and stderr (&>) */
+    REDIR_HEREDOC    /**< Here-document (<<) */
 } qsh_redir_type_t;
 
 /**
@@ -82,12 +85,13 @@ typedef struct {
  */
 typedef struct {
     char* current_dir;            /**< Current working directory */
-    char* home_dir;               /**< Home directory */
-    char* prompt;                 /**< Shell prompt */
-    int last_status;              /**< Last command exit status */
-    bool is_interactive;          /**< Whether shell is interactive */
-    bool should_exit;             /**< Whether shell should exit */
-    pid_t foreground_pgid;        /**< Foreground process group ID */
+    char* previous_dir;           /**< Previous working directory (for cd -) */
+    char* home_dir;              /**< Home directory */
+    char* prompt;                /**< Shell prompt */
+    int last_status;             /**< Last command exit status */
+    bool is_interactive;         /**< Whether shell is interactive */
+    bool should_exit;            /**< Whether shell should exit */
+    pid_t foreground_pgid;       /**< Foreground process group ID */
 } qsh_state_t;
 
 #endif // QSH_TYPES_H 

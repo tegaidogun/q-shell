@@ -8,6 +8,7 @@
 #include "../../include/profiler/profiler.h"
 #include "../../include/utils/debug.h"
 #include "../../include/utils/variables.h"
+#include "../../include/utils/aliases.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -196,6 +197,9 @@ int qsh_init(qsh_state_t* state) {
     // Initialize variables system
     qsh_variables_init();
     
+    // Initialize aliases
+    qsh_aliases_init();
+    
     // Initialize profiler
     qsh_profiler_init(&profiler_state);
     
@@ -224,6 +228,9 @@ void qsh_cleanup(void) {
     
     // Clean up variables
     qsh_variables_cleanup();
+    
+    // Clean up aliases
+    qsh_aliases_cleanup();
     
     // Clean up shell state
     free(shell_state.current_dir);

@@ -14,6 +14,7 @@
 #include "utils/debug.h"
 #include "utils/input.h"
 #include "utils/variables.h"
+#include "utils/aliases.h"
 
 // System includes
 #include <stdio.h>
@@ -56,6 +57,8 @@ static const qsh_builtin_t builtins[] = {
     {"kill", qsh_builtin_kill, "Send signal to process"},
     {"export", qsh_builtin_export, "Export variables to environment"},
     {"unset", qsh_builtin_unset, "Unset shell variables"},
+    {"alias", qsh_builtin_alias, "Create or list aliases"},
+    {"unalias", qsh_builtin_unalias, "Remove aliases"},
     {NULL, NULL, NULL}
 };
 
@@ -131,9 +134,9 @@ int qsh_builtin_cd(qsh_command_t* cmd) {
         }
     } else {
         path = getenv("HOME");
-        if (!path) {
-            fprintf(stderr, "cd: no home directory\n");
-            return 1;
+    if (!path) {
+        fprintf(stderr, "cd: no home directory\n");
+        return 1;
         }
     }
 
@@ -574,6 +577,122 @@ int qsh_builtin_unset(qsh_command_t* cmd) {
     }
     
     return 0;
+}
+
+int qsh_builtin_alias(qsh_command_t* cmd) {
+    if (!cmd) {
+        return 1;
+    }
+    
+    // No arguments: list all aliases
+    if (cmd->argc == 1) {
+        size_t count = 0;
+        char** names = qsh_alias_list_all(&count);
+        
+        if (!names) {
+            return 0;  // No aliases
+        }
+        
+        for (size_t i = 0; i < count; i++) {
+            const char* value = qsh_alias_get(names[i]);
+            if (value) {
+                printf("alias %s='%s'\n", names[i], value);
+            }
+            free(names[i]);
+        }
+        free(names);
+        return 0;
+    }
+    
+    // Process each argument
+    int exit_status = 0;
+    for (int i = 1; i < cmd->argc; i++) {
+        const char* arg = cmd->argv[i];
+        
+        // Check for 'name=value' format
+        const char* equals = strchr(arg, '=');
+        if (equals) {
+            // Extract name and value
+            size_t name_len = equals - arg;
+            if (name_len == 0) {
+                fprintf(stderr, "alias: invalid alias name\n");
+                exit_status = 1;
+                continue;
+            }
+            
+            char* name = malloc(name_len + 1);
+            if (!name) {
+                fprintf(stderr, "alias: out of memory\n");
+                exit_status = 1;
+                continue;
+            }
+            strncpy(name, arg, name_len);
+            name[name_len] = '\0';
+            
+            const char* value = equals + 1;
+            
+            // Strip surrounding quotes if present
+            size_t value_len = strlen(value);
+            char* clean_value = NULL;
+            if (value_len >= 2 && 
+                ((value[0] == '"' && value[value_len - 1] == '"') ||
+                 (value[0] == '\'' && value[value_len - 1] == '\''))) {
+                // Remove surrounding quotes
+                clean_value = malloc(value_len - 1);
+                if (clean_value) {
+                    strncpy(clean_value, value + 1, value_len - 2);
+                    clean_value[value_len - 2] = '\0';
+                }
+            } else {
+                clean_value = strdup(value);
+            }
+            
+            if (!clean_value) {
+                fprintf(stderr, "alias: out of memory\n");
+                exit_status = 1;
+                free(name);
+                continue;
+            }
+            
+            if (qsh_alias_set(name, clean_value) != 0) {
+                fprintf(stderr, "alias: failed to set alias '%s'\n", name);
+                exit_status = 1;
+            }
+            free(clean_value);
+            free(name);
+        } else {
+            // Just show the alias value
+            const char* value = qsh_alias_get(arg);
+            if (value) {
+                printf("alias %s='%s'\n", arg, value);
+            } else {
+                fprintf(stderr, "alias: %s: not found\n", arg);
+                exit_status = 1;
+            }
+        }
+    }
+    
+    return exit_status;
+}
+
+int qsh_builtin_unalias(qsh_command_t* cmd) {
+    if (!cmd || cmd->argc < 2) {
+        fprintf(stderr, "unalias: usage: unalias NAME [NAME ...]\n");
+        return 1;
+    }
+    
+    int exit_status = 0;
+    
+    // Remove each alias
+    for (int i = 1; i < cmd->argc; i++) {
+        const char* name = cmd->argv[i];
+        if (qsh_alias_unset(name) != 0) {
+            fprintf(stderr, "unalias: %s: not found\n", name);
+            exit_status = 1;
+        }
+    }
+    
+    return exit_status;
 }
 
 const qsh_builtin_t* qsh_builtin_get_all(size_t* count) {

@@ -146,6 +146,22 @@ int qsh_builtin_export(qsh_command_t* cmd);
 int qsh_builtin_unset(qsh_command_t* cmd);
 
 /**
+ * @brief Creates or lists aliases
+ * 
+ * @param cmd Command structure containing alias definitions or names
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_alias(qsh_command_t* cmd);
+
+/**
+ * @brief Removes aliases
+ * 
+ * @param cmd Command structure containing alias names to remove
+ * @return int 0 on success, non-zero on error
+ */
+int qsh_builtin_unalias(qsh_command_t* cmd);
+
+/**
  * @brief Looks up a built-in command by name
  * 
  * @param name Name of the command to look up

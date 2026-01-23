@@ -45,12 +45,14 @@ static qsh_command_t* create_command(void) {
  * the specified user's home directory. For ~ alone, it uses the current
  * user's home directory.
  * 
- * @param path The path containing tilde to expand
+ * @param path_ptr Pointer to the path string containing tilde to expand.
+ *                 The pointer may be updated if reallocation is needed.
  */
-static void expand_tilde(char* path) {
-    if (!path || !*path) {
+static void expand_tilde(char** path_ptr) {
+    if (!path_ptr || !*path_ptr || !**path_ptr) {
         return;
     }
+    char* path = *path_ptr;
     DEBUG_LOG(DEBUG_PARSER, "Expanding tilde in path: '%s'", path);
     if (path[0] != '~') {
         DEBUG_LOG(DEBUG_PARSER, "No tilde found, returning");
@@ -85,6 +87,21 @@ static void expand_tilde(char* path) {
             snprintf(new_path, sizeof(new_path), "%s", pw->pw_dir);
         }
         DEBUG_LOG(DEBUG_PARSER, "Expanded path: '%s' -> '%s'", path, new_path);
+        
+        // Check if we need to reallocate
+        size_t new_len = strlen(new_path);
+        size_t old_len = strlen(path);
+        if (new_len > old_len) {
+            // Need to reallocate
+            char* new_alloc = realloc(path, new_len + 1);
+            if (new_alloc) {
+                *path_ptr = new_alloc;
+                path = new_alloc;
+            } else {
+                // Reallocation failed, but we can still try to copy what fits
+                DEBUG_LOG(DEBUG_PARSER, "Reallocation failed, truncating");
+            }
+        }
         strcpy(path, new_path);
     }
 }
@@ -437,7 +454,7 @@ qsh_command_t* qsh_parse_command(const char* input) {
                     free_token_list(tokens);
                     return NULL;
                 }
-                expand_tilde(redir->filename);
+                expand_tilde(&redir->filename);
                 current_cmd->redir_count++;
                 break;
                 
@@ -484,8 +501,8 @@ qsh_command_t* qsh_parse_command(const char* input) {
                 
                 DEBUG_LOG(DEBUG_PARSER, "Adding argument: '%s'", token->value);
                 add_argument(current_cmd, token->value);
-                if (token->type == TOKEN_LITERAL) {
-                    expand_tilde(current_cmd->argv[current_cmd->argc - 1]);
+                if (token->type == TOKEN_LITERAL && current_cmd->argc > 0) {
+                    expand_tilde(&current_cmd->argv[current_cmd->argc - 1]);
                 }
                 break;
         }

@@ -11,6 +11,7 @@
 #include "../include/builtins/builtins.h"
 #include "../include/profiler/profiler.h"
 #include "../include/utils/history.h"
+#include "../include/utils/aliases.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -118,6 +119,14 @@ int main(void) {
         // Skip empty lines but add non-empty ones to history
         if (strlen(input) > 0) {
             add_history(input);
+            
+            // Expand aliases before parsing
+            char* expanded_input = NULL;
+            if (qsh_alias_expand(input, &expanded_input) == 0 && expanded_input) {
+                // Use expanded input if alias was found, otherwise use original
+                free(input);
+                input = expanded_input;
+            }
             
             // Parse and execute command
             cmd = qsh_parse_command(input);

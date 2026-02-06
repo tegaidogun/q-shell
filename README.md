@@ -2,24 +2,13 @@
 
 A modern shell implementation with advanced features and extensibility.
 
-## Features
-
-- Command chaining with operators (|, &&, ||)
-- I/O redirection
-- Background job control
-- Command history
-- Built-in commands
-- System call profiling
-
-## Dependencies
-
-### Required
+### Required Dependencies
 - GCC (GNU Compiler Collection)
 - CMake (>= 3.10)
 - GNU Readline library
 - POSIX-compliant system
 
-### Optional
+### Optional Dependencies
 - Python 3 (for documentation scripts)
 - Doxygen (for API documentation)
 
@@ -36,9 +25,9 @@ cd q-shell
 make
 ```
 
-3. Install (optional):
+3. Run the program:
 ```bash
-sudo make install
+./q-shell
 ```
 
 ## Documentation and Testing
